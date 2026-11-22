@@ -211,3 +211,10 @@ O PGBR integrou seu **próprio motor compartilhado** no [PR #87](https://github.
 **Governança:** consultar cada Mestre e HEAD, preservar branches simultâneas, histórico, ABI, licenças, APKs, registros do usuário e releases já publicadas. Este adendo é **documentação**, não implementação de recursos em outros projetos.
 
 **PGSharp próprio:** este repositório de referências e testes não é fonte do fornecedor, e a análise não autoriza afirmar cópia de método binário ou gameplay validado.
+
+
+<!-- PGBR_LT038_RELEASE_PUBLISHED_PGSHARP_20261122 -->
+### 22/11/2026 — Release PGBR LT038 publicada (recibo, não funcionalidade PGSharp)
+A [PR #98 do PGBR](https://github.com/LucianoToscano/PGBR/pull/98) foi integrada em `4ca4c48d417cc4218915db7d763fd360f2c0fc85`, e o [workflow #45039119340](https://github.com/LucianoToscano/PGBR/actions/runs/45039119340) concluiu `success`. [Pré-release v0.00.38-LT](https://github.com/LucianoToscano/PGBR/releases/tag/v0.00.38-LT) publicada em 22/11/2026 15:46:48 UTC. [APK sem Root](https://github.com/LucianoToscano/PGBR/releases/download/v0.00.38-LT/PGBR-v0.00.38-LT.apk), SHA-256 `cdea0e27a9a1adf198bc25163b0313ed7dd1381f3c8cccc07470823dcc4f01ea`; [Root](https://github.com/LucianoToscano/PGBR/releases/download/v0.00.38-LT/PGBR-v0.00.38-LT-Root.apk), SHA-256 `36cd54df01036a4e9e81defd3ddd1cecfa824034e693a4971ac1c9f012026597`; [Zygisk](https://github.com/LucianoToscano/PGBR/releases/download/v0.00.38-LT/PGBR-v0.00.38-LT-Root-module.zip), SHA-256 `ee9eea160001e9b9495df91ff9d77b21b4fd720722c057b06ec33b5a8dc5c9a1`.
+
+A LT038 empacota menu Batalha Inteligente/Ataque Inteligente/Cura Inteligente, 2300ms de escolha manual de Pokémon, 1700ms de escudo e ataques carregados imediatos; **não** inclui seleção nativa universal do golpe super eficaz nem reparo comprovado da tela esbranquiçada. `device_tested=false`. Nenhum método binário PGSharp foi copiado ou aplicado. Registro apenas documental no repositório do usuário.
