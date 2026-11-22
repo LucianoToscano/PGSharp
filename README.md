@@ -1,5 +1,8 @@
 # PGSharp-Pessoal — COMPILADOR PÚBLICO
 
+> **Atualização de consolidação — 21/11/2026:** o código-fonte próprio de `PGSharp-Privado` foi incorporado neste repositório público pelo [PR #1](https://github.com/LucianoToscano/PGSharp-Pessoal/pull/1), com scripts, testes, editor, classes Java e documentação preservados. Os workflows históricos foram arquivados em `docs/legado/` para não interferir no CI. O nome público ainda é `PGSharp-Pessoal`; a renomeação para `PGSharp` depende das configurações administrativas do GitHub. **O gerador de APK abaixo é um fluxo legado e ainda usa um clone do repositório privado; não excluir o privado antes da atualização e validação desse fluxo.** Nenhuma compilação final foi validada no aparelho nesta consolidação.
+
+
 Este repositório é **somente a central de compilação**, não o lugar onde desenvolvemos nem guardamos dados pessoais.
 
 | Repositório | Função |
