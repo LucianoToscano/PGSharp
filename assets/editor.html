@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Editor de Favoritos • PGSharp DAT</title>
+<style>
+:root {font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; color-scheme:dark; --bg:#10151a;--fg:#e8edf2;--muted:#a1aebb;--card:#202932;--line:#394650;--glass:rgba(32,41,50,.86);--accent:#a6d5c3;--danger:#efb1b1}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% -20%,#344d4d 0%,transparent 35%),linear-gradient(150deg,#111b1f,#111419);color:var(--fg);min-height:100vh}
+.wrap{max-width:920px;margin:auto;padding:18px 16px 52px}h1{font-size:clamp(23px,4vw,34px);font-weight:700;letter-spacing:-.65px;margin:5px 0}p{margin:8px 0;line-height:1.5}.muted{color:var(--muted)}.micro{font-size:12px;color:var(--muted)}
+.eyebrow{color:var(--accent);font-size:11px;letter-spacing:.13em;font-weight:700;text-transform:uppercase;margin-top:10px}
+.box{border:1px solid var(--line);background:var(--glass);border-radius:17px;padding:15px;margin:15px 0;box-shadow:0 9px 26px rgba(0,0,0,.12)}
+.flex{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.grow{flex:1;min-width:0}.right{margin-left:auto}
+button,.filebtn{appearance:none;background:#2e3b43;color:var(--fg);border:1px solid #4a5c62;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.25;font-weight:600;cursor:pointer;transition:background .15s}
+button:hover,.filebtn:hover{background:#405158}button:disabled{opacity:.35;cursor:not-allowed}button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.primary{background:#c1e4d7;color:#18312c;border:0}.primary:hover{background:#a8d8c6}.warn{color:#f8cdce}.ghost{background:transparent}.tiny{padding:7px 9px;min-width:36px}.soft{font-weight:400;color:var(--muted)}
+.filebtn input{display:none}.drop{border:1px dashed #74938c;border-radius:16px;padding:19px;background:rgba(166,213,195,.045)}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:thin}.tabs button{white-space:nowrap;flex-shrink:0;border-radius:12px}.tabs button.active{background:var(--accent);color:#14302a;border-color:transparent}
+.search{width:100%;max-width:320px;border:1px solid #4f6069;color:var(--fg);background:#111a20;border-radius:10px;padding:11px 13px;font-size:15px}
+#list{display:flex;flex-direction:column;gap:7px;margin-top:12px}.fav-row{display:flex;gap:8px;align-items:center;border:1px solid #384650;background:rgba(31,42,51,.84);border-radius:13px;padding:8px 10px;min-height:64px}.fav-row:hover{border-color:#67817b}.fav-row.dragging{border-color:var(--accent);background:#415550;box-shadow:0 9px 30px #0009;z-index:10;opacity:.96}.num{font:12px ui-monospace,monospace;color:#b6d9ce;width:29px;text-align:center;flex-shrink:0;border:1px solid #405951;background:#263a37;padding:7px 0;border-radius:9px;cursor:pointer}.grip{touch-action:none;user-select:none;cursor:grab;font-size:21px;color:#94bbb0;letter-spacing:-3px;padding:9px 5px}.grip:active{cursor:grabbing}.entry{flex:1;min-width:0;line-height:1.38;overflow-wrap:anywhere}.entryName{font-size:14px;white-space:pre-line}.entryMeta{color:#91a5ae;font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctrls{display:flex;gap:4px;align-items:center;flex-wrap:nowrap}.ctrls button{padding:7px 8px;min-width:30px}.actions{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.legend{margin:14px 0 2px;padding:11px 13px;border-radius:12px;background:#20322f;border:1px solid #37574e;font-size:13px;color:#bfddd3;line-height:1.5}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);border:1px dashed var(--line);border-radius:14px}.alert{color:var(--danger)}dialog{background:#263039;color:var(--fg);border:1px solid #61716b;border-radius:16px;width:min(500px,calc(100% - 24px));padding:22px;box-shadow:0 20px 70px #000b}dialog::backdrop{background:#0b1013c9}dialog textarea{width:100%;resize:vertical;min-height:86px;background:#10191d;border:1px solid #64736f;color:white;border-radius:10px;padding:11px;font:15px inherit;margin:12px 0}
+footer{margin-top:24px;border-top:1px solid var(--line);padding-top:20px;font-size:12px;color:var(--muted);line-height:1.6}
+@media(max-width:540px){.wrap{padding:14px 11px 42px}.box{padding:12px}.fav-row{gap:5px;padding:8px 6px}.grip{padding:6px 3px}.ctrls{gap:3px}.ctrls button{padding:8px 7px}.num{width:27px}.entryName{font-size:13px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+ <div class="eyebrow">Ferramenta independente • 100% local</div>
+ <h1>Editor de favoritos <span class="soft">PGSharp</span></h1>
+ <p class="muted">Renomeie, arraste, ordene ou reorganize os favoritos. Exporte um novo <b>PGSData.dat</b> sem alterar os demais ajustes do backup.</p>
+ <div class="box drop" id="drop">
+  <div class="flex"><label class="filebtn primary">📂 Abrir PGSData.dat<input id="pick" type="file" accept=".dat,application/octet-stream"></label><div class="grow micro">Arquivo é lido no seu aparelho. Não é enviado para servidor.</div></div>
+  <p id="fileinfo" class="micro">Nenhum arquivo carregado.</p>
+ </div>
+ <div id="workspace" hidden>
+  <div class="box">
+   <div class="flex"><div class="grow"><b>Seus favoritos</b><div id="counter" class="micro"></div></div><button id="undo" class="tiny ghost" title="Desfazer última alteração">↶ Desfazer</button><button id="reset" class="tiny ghost" title="Voltar ao arquivo carregado">⟲ Restaurar</button></div>
+   <div id="tabs" class="tabs" role="tablist"></div>
+   <div class="flex"><input class="search grow" id="search" placeholder="🔎 Pesquisar nome ou emoji" autocomplete="off"><button id="alpha" class="tiny ghost">A–Z</button><button class="tiny ghost" id="reverse">⇵ Inverter</button></div>
+   <div id="hint" class="legend">☰ Segure e arraste pela alça para mudar a posição. Use ↑ ↓ se preferir. Toque em ✎ para mudar o nome ou no número para escolher uma posição exata.</div>
+   <div id="list"></div>
+  </div>
+  <div class="box">
+   <div class="flex"><div class="grow"><b>Salvar alterações</b><div id="changes" class="micro">Sem alterações.</div></div><button class="primary" id="export">⬇ Exportar DAT editado</button></div>
+   <div class="micro" style="margin-top:12px">O original não é sobrescrito. Guarde o backup e importe a cópia editada no PGSharp apenas após conferir as alterações. Não há garantia de que todas as versões respeitem a ordem do arquivo.</div>
+  </div>
+ </div>
+ <div class="box" id="guide">
+  <b>Como usar</b>
+  <p class="micro">1. Exporte as configurações pelo PGSharp e mantenha uma cópia intocada.<br>2. Abra o <b>PGSData.dat</b> aqui. Escolha Pokémon, pesquisas, raides, locais ou rotas.<br>3. Renomeie com ✎, mova com ☰ ou com as setas e clique em <b>Exportar DAT editado</b>.<br>4. Confira o backup exportado antes de importá-lo no aplicativo.</p>
+ </div>
+ <footer>Ferramenta não oficial, sem vínculo com PGSharp, Pokémon GO ou Niantic. Não edita o APK, não altera o inventário da conta e não realiza login. O DAT pode incluir informações privadas, tokens e dados de licença: não compartilhe arquivos de backup publicamente. A importação no aplicativo exige teste real.</footer>
+</main>
+<dialog id="editor"><form method="dialog"><b id="editTitle">Editar nome</b><p class="micro">Apenas o nome será modificado; filtros, coordenadas e outras propriedades serão preservados.</p><textarea id="nameBox" spellcheck="false"></textarea><div class="flex"><button value="cancel" class="ghost">Cancelar</button><button class="primary right" id="saveName" value="ok">Salvar nome</button></div></form></dialog>
+<script>
+'use strict';
+const SECTIONS=[
+ {key:'hlfeeds',label:'Pokémon',icon:'⚡',meta:x=>`IV ${x.minIV??'?'}–${x.maxIV??'?'}% · ${x.pokemons?.length??0} espécies · ${x.distance??0} km`},
+ {key:'hlfeedsquest',label:'Pesquisas',icon:'🎁',meta:x=>`Recompensa ${x.r_type??'—'} · ${x.distance??0} km`},
+ {key:'hlfeedsraid',label:'Raides',icon:'🏟️',meta:x=>`Níveis ${(x.levels||[]).join(', ')} · ${x.distance??0} km`},
+ {key:'hlfavor',label:'Locais',icon:'📍',meta:x=>`Localização favorita · fuso ${x.tz||'não definido'}`},
+ {key:'hlfavorRoute',label:'Rotas',icon:'🧭',meta:x=>`Rota com ${x.points?.length??0} pontos`}
+];
+let originalBytes=null, originalSections=null, state={}, currentKey='hlfeeds', undoStack=[], loadedName='';
+const $=s=>document.querySelector(s);const el=(tag,cl)=>{const e=document.createElement(tag);if(cl)e.className=cl;return e};
+function decodeMUTF8(bytes){let s='';for(let i=0;i<bytes.length;){let a=bytes[i++],c;if(a<=0x7f)c=a;else if((a&0xe0)===0xc0){if(i>=bytes.length)throw Error('MUTF-8 truncado');let b=bytes[i++];if((b&0xc0)!==0x80)throw Error('MUTF-8 inválido');c=((a&31)<<6)|(b&63)}else if((a&0xf0)===0xe0){if(i+1>=bytes.length)throw Error('MUTF-8 truncado');let b=bytes[i++],d=bytes[i++];if((b&0xc0)!==0x80||(d&0xc0)!==0x80)throw Error('MUTF-8 inválido');c=((a&15)<<12)|((b&63)<<6)|(d&63)}else throw Error('MUTF-8 não suportado');s+=String.fromCharCode(c)}return s}
+function encodeMUTF8(s){let out=[];for(let i=0;i<s.length;i++){let c=s.charCodeAt(i);if(c>=1&&c<=0x7f)out.push(c);else if(c<=0x7ff)out.push(0xc0|(c>>6),0x80|(c&63));else out.push(0xe0|(c>>12),0x80|((c>>6)&63),0x80|(c&63))}return new Uint8Array(out)}
+function locateSection(bytes,key){const keyBytes=encodeMUTF8(key);let found=[];for(let i=4;i+keyBytes.length+5<bytes.length;i++){if(bytes[i]!==0x74||bytes[i+1]!==0||bytes[i+2]!==keyBytes.length||bytes[i+3]!==keyBytes[0])continue;let ok=true;for(let j=0;j<keyBytes.length;j++)if(bytes[i+3+j]!==keyBytes[j]){ok=false;break}if(!ok)continue;let t=i+3+keyBytes.length,ty=bytes[t],sz=ty===0x74?2:ty===0x7c?8:0;if(!sz)continue;let len=0;for(let j=0;j<sz;j++)len=len*256+bytes[t+1+j];let start=t+1+sz,end=start+len;if(!Number.isSafeInteger(len)||len>3000000||end>bytes.length)continue;try{let values=JSON.parse(decodeMUTF8(bytes.slice(start,end)));if(Array.isArray(values)&&values.every(x=>x&&typeof x==='object'&&typeof x.name==='string'))found.push({key,values,start,end,tokenPos:t})}catch(e){} }
+ if(found.length!==1)throw Error(`Seção ${key}: esperada 1 lista, encontradas ${found.length}. Arquivo incompatível ou diferente do esperado.`);return found[0]}
+function cloneEntries(a){return a.map(x=>({...x}))}
+function snap(){undoStack.push({key:currentKey,values:cloneEntries(state[currentKey].values)});if(undoStack.length>70)undoStack.shift()}
+function applyChange(fn){snap();fn();state[currentKey].dirty=true;render()}
+function changePosition(from,to){let a=state[currentKey].values;if(to<0||to>=a.length||from===to)return;applyChange(()=>a.splice(to,0,a.splice(from,1)[0]))}
+function btn(label,title,action){let b=el('button','tiny');b.type='button';b.textContent=label;b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',action);return b}
+function editName(idx){const it=state[currentKey].values[idx];$('#nameBox').value=it.name;$('#editTitle').textContent='✎ Renomear favorito';$('#editor').dataset.idx=idx;$('#editor').showModal();setTimeout(()=>{$('#nameBox').focus();$('#nameBox').select()},45)}
+$('#editor').addEventListener('close',()=>{if($('#editor').returnValue!=='ok')return;let ix=Number($('#editor').dataset.idx);let v=$('#nameBox').value.trim();if(!v){alert('O nome não pode ficar vazio.');return}if(v.length>350){alert('Limite recomendado: 350 caracteres.');return}let a=state[currentKey].values;if(!a[ix]||a[ix].name===v)return;applyChange(()=>a[ix].name=v) });
+function renderTabs(){let tabs=$('#tabs');tabs.replaceChildren();for(let s of SECTIONS){let b=el('button',currentKey===s.key?'active':'');b.type='button';b.textContent=`${s.icon} ${s.label} · ${state[s.key].values.length}`;b.setAttribute('role','tab');b.setAttribute('aria-selected',currentKey===s.key?'true':'false');b.onclick=()=>{currentKey=s.key;$('#search').value='';render()};tabs.append(b)}}
+function render(){renderTabs();let sc=state[currentKey],a=sc.values,q=$('#search').value.toLocaleLowerCase('pt-BR');let visible=a.map((value,i)=>({value,i})).filter(v=>v.value.name.toLocaleLowerCase('pt-BR').includes(q));$('#counter').textContent=`${visible.length} exibidos de ${a.length} · 5 seções editáveis`;$('#undo').disabled=!undoStack.length;$('#changes').textContent=SECTIONS.filter(s=>state[s.key].dirty).map(s=>`${s.label}: editado`).join(' · ')||'Sem alterações.';$('#hint').textContent=q?'🔎 Limpe a pesquisa para reordenar ou arrastar. Os nomes podem ser editados durante a busca.':'☰ Segure e arraste pela alça. Use ↑ ↓ como alternativa para ordenar no celular. Toque em ✎ para renomear, ou no número para mover direto.';
+ let list=$('#list');list.replaceChildren();if(!visible.length){let empty=el('div','empty');empty.textContent='Nenhum favorito encontrado.';list.append(empty);return}
+ for(let {value:x,i} of visible){let row=el('div','fav-row');row.dataset.itemIdx=i;
+  let num=el('button','num');num.type='button';num.textContent=String(i+1);num.title='Mover direto para uma posição';num.setAttribute('aria-label','Mover para posição exata');num.onclick=()=>{let raw=prompt('Mover para qual posição? (1 a '+a.length+')',String(i+1));if(raw===null)return;let n=Number(raw);if(!Number.isInteger(n)||n<1||n>a.length){alert('Informe um número entre 1 e '+a.length);return}$('#search').value='';changePosition(i,n-1)};row.append(num);
+  let grip=el('div','grip');grip.textContent='☰';grip.title=q?'Limpe a pesquisa para arrastar':'Segure para arrastar';grip.setAttribute('aria-label','Segure para arrastar');if(!q)bindGrip(grip,row,list);else grip.style.opacity='.3';row.append(grip);
+  let body=el('div','entry');let name=el('div','entryName');name.textContent=x.name;let meta=el('div','entryMeta');meta.textContent=SECTIONS.find(s=>s.key===currentKey).meta(x);body.append(name,meta);row.append(body);
+  let ctrls=el('div','ctrls');let edit=btn('✎','Editar nome',()=>editName(i));ctrls.append(edit);
+  if(!q){let up=btn('↑','Mover uma posição acima',()=>changePosition(i,i-1));up.disabled=i===0;let dn=btn('↓','Mover uma posição abaixo',()=>changePosition(i,i+1));dn.disabled=i===a.length-1;ctrls.append(up,dn)}
+  row.append(ctrls);list.append(row)
+ }
+}
+function bindGrip(grip,row,list){grip.addEventListener('pointerdown',e=>{if(e.button!==0||$('#search').value)return;e.preventDefault();let activeRow=row,startY=e.clientY,moved=false;grip.setPointerCapture(e.pointerId);activeRow.classList.add('dragging');function moving(ev){if(Math.abs(ev.clientY-startY)>4)moved=true;if(!moved)return;let target=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('.fav-row');if(!target||target===activeRow||target.parentElement!==list)return;let children=[...list.children],i=children.indexOf(activeRow),j=children.indexOf(target);if(j<i)list.insertBefore(activeRow,target);else list.insertBefore(activeRow,target.nextSibling)}function done(){grip.removeEventListener('pointermove',moving);grip.removeEventListener('pointerup',done);grip.removeEventListener('pointercancel',done);activeRow.classList.remove('dragging');if(!moved)return;let before=state[currentKey].values,newList=[...list.children].map(n=>before[Number(n.dataset.itemIdx)]);if(newList.every((v,i)=>v===before[i]))return;applyChange(()=>{state[currentKey].values=newList})}grip.addEventListener('pointermove',moving);grip.addEventListener('pointerup',done,{once:true});grip.addEventListener('pointercancel',done,{once:true})})}
+async function loadFile(f){try{if(!f) return;if(f.size>15000000)throw Error('Arquivo acima de 15 MB; confira se é um PGSData.dat válido.');let bytes=new Uint8Array(await f.arrayBuffer());if(bytes.length<20||bytes[0]!==0xac||bytes[1]!==0xed||bytes[2]!==0||bytes[3]!==5)throw Error('Não parece um arquivo Java Serializado PGSData.dat.');let found={};for(let sec of SECTIONS)found[sec.key]=locateSection(bytes,sec.key);originalBytes=bytes;originalSections=found;state={};for(let s of SECTIONS)state[s.key]={values:cloneEntries(found[s.key].values),dirty:false};undoStack=[];loadedName=f.name;currentKey='hlfeeds';$('#search').value='';$('#workspace').hidden=false;$('#fileinfo').textContent=`✓ ${f.name} carregado • ${bytes.length.toLocaleString('pt-BR')} bytes • ${SECTIONS.reduce((n,s)=>n+state[s.key].values.length,0)} entradas`;render();$('#workspace').scrollIntoView({behavior:'smooth',block:'start'})}catch(err){$('#workspace').hidden=true;$('#fileinfo').textContent='Erro: '+err.message;alert('Não foi possível abrir este DAT: '+err.message)}}
+$('#pick').addEventListener('change',e=>loadFile(e.target.files[0]));let drop=$('#drop');drop.addEventListener('dragover',e=>e.preventDefault());drop.addEventListener('drop',e=>{e.preventDefault();loadFile(e.dataTransfer.files[0])});$('#search').addEventListener('input',render);
+$('#undo').onclick=()=>{let last=undoStack.pop();if(!last)return;state[last.key].values=last.values;state[last.key].dirty=true;currentKey=last.key;$('#search').value='';render()};
+$('#reset').onclick=()=>{if(!confirm('Restaurar todas as 5 listas ao conteúdo original carregado?'))return;for(let s of SECTIONS)state[s.key]={values:cloneEntries(originalSections[s.key].values),dirty:false};undoStack=[];$('#search').value='';render()};
+$('#alpha').onclick=()=>{if(!confirm('Ordenar alfabeticamente esta lista? Você poderá desfazer.'))return;applyChange(()=>state[currentKey].values.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR',{numeric:true,sensitivity:'base'})))};
+$('#reverse').onclick=()=>{if(!confirm('Inverter a ordem desta lista?'))return;applyChange(()=>state[currentKey].values.reverse())};
+function encodeStringRecord(s){let arr=encodeMUTF8(s),short=arr.length<=65535,head=new Uint8Array(short?3:9);head[0]=short?0x74:0x7c;let len=arr.length;if(short){head[1]=len>>>8;head[2]=len&255}else{for(let k=8;k>=1;k--){head[k]=len&255;len=Math.floor(len/256)}}let out=new Uint8Array(head.length+arr.length);out.set(head);out.set(arr,head.length);return out}
+function patchBytes(bytes,patches){let out=bytes;for(let p of patches.sort((a,b)=>b.from-a.from)){let result=new Uint8Array(out.length-(p.to-p.from)+p.repl.length);result.set(out.slice(0,p.from),0);result.set(p.repl,p.from);result.set(out.slice(p.to),p.from+p.repl.length);out=result}return out}
+function getEditedFile(){if(!originalBytes)throw Error('Nenhum DAT carregado.');let patches=[];for(let s of SECTIONS){let sc=state[s.key];if(!sc.dirty)continue;if(sc.values.some(v=>!v.name||typeof v.name!=='string'))throw Error('Nome vazio ou inválido na seção '+s.label);let rec=originalSections[s.key],str=JSON.stringify(sc.values);patches.push({from:rec.tokenPos,to:rec.end,repl:encodeStringRecord(str)})}return patchBytes(originalBytes,patches)}
+$('#export').onclick=()=>{try{let b=getEditedFile();let check={};for(let s of SECTIONS)check[s.key]=locateSection(b,s.key);for(let s of SECTIONS){let wanted=JSON.stringify(state[s.key].values),actual=JSON.stringify(check[s.key].values);if(actual!==wanted)throw Error('Falha de validação: '+s.label)}const filename='PGSData_editado_'+new Date().toISOString().slice(0,10)+'.dat';
+if(window.PgsAndroid && typeof window.PgsAndroid.saveBase64==='function'){
+  let parts=[];for(let i=0;i<b.length;i+=16384)parts.push(String.fromCharCode.apply(null,b.subarray(i,i+16384)));
+  window.PgsAndroid.saveBase64(btoa(parts.join('')),filename);
+}else{
+  let blob=new Blob([b],{type:'application/octet-stream'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),20000);
+}
+$('#changes').textContent=`✓ DAT validado (${b.length.toLocaleString('pt-BR')} bytes) e preparado para baixar. Backup original preservado.`}catch(err){alert('Não foi possível exportar: '+err.message)}};
+</script>
+</body>
+</html>
