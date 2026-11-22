@@ -1,14 +1,13 @@
 #requires -version 5.1
-# Configuração inicial do compilador pessoal. Requer gh autenticado, JDK e APK de backup.
-# Execute localmente: powershell -ExecutionPolicy Bypass -File .\scripts\primeira_compilacao.ps1 -ApkPath "C:\caminho\original.apk"
+# Configuração inicial do PGSharp consolidado. Requer gh autenticado, JDK e uma cópia local legítima do APK-base.
+# Execute localmente: powershell -ExecutionPolicy Bypass -File .\scripts\primeira_compilacao.ps1 -ApkPath "C:\caminho\original.apk" -BaseApkUrl "https://URL-PRIVADA-AUTORIZADA"
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)] [string]$ApkPath)
+param([Parameter(Mandatory=$true)] [string]$ApkPath, [string]$BaseApkUrl)
 $ErrorActionPreference = 'Stop'
-$private = 'LucianoToscano/PGSharp-Privado'
-$public = 'LucianoToscano/PGSharp-Pessoal'
+$public = 'LucianoToscano/PGSharp'
 $sha256 = 'db38fc01e0148e56a707fca5b08163f2171b2268a667a76428124dc2b069cd83'
 $alias = 'pgspessoal'
-$baseDir = Join-Path $env:USERPROFILE 'PGSharp-Pessoal-Privado'
+$baseDir = Join-Path $env:USERPROFILE 'PGSharp-Unificado'
 $keystore = Join-Path $baseDir 'pgspessoal.jks'
 
 function Check-Exit([string]$step) { if($LASTEXITCODE -ne 0) { throw "$step: falha ($LASTEXITCODE)" } }
@@ -51,34 +50,21 @@ try {
     }
     & gh auth status
     Check-Exit 'Autenticação'
-    $v = & gh repo view $private --json isPrivate -q '.isPrivate'
-    Check-Exit 'Visibilidade privada'
-    if($v.Trim() -ne 'true') { throw 'Repositório privado não está privado.' }
     $v = & gh repo view $public --json isPrivate -q '.isPrivate'
     Check-Exit 'Visibilidade pública'
     if($v.Trim() -ne 'false') { throw 'Repositório público inesperado.' }
 
-    # Jamais faça commit do original: fica somente como asset em release PRIVADA.
-    $assets = @()
-    & gh release view base-apk -R $private --json assets -q '.assets[].name' 2>$null |
-      ForEach-Object { $assets += $_ }
-    $exists = ($LASTEXITCODE -eq 0)
-    if(-not ($assets -contains 'original.apk')) {
-        $temp = Join-Path ([IO.Path]::GetTempPath()) ('pgs-' + [guid]::NewGuid().ToString('N'))
-        New-Item -ItemType Directory -Path $temp | Out-Null
-        try {
-            $staged = Join-Path $temp 'original.apk'
-            Copy-Item -LiteralPath $f.FullName -Destination $staged
-            if($exists) {
-                & gh release upload base-apk $staged -R $private
-                Check-Exit 'Upload da base privada'
-            } else {
-                & gh release create base-apk $staged -R $private --title 'APK base privado' --notes 'Referência privada para recompilação particular.' --latest=false
-                Check-Exit 'Release privada'
-            }
-        } finally { Remove-Item -LiteralPath $temp -Force -Recurse }
+    # A cópia original não deve ser publicada em release ou commit público.
+    # URL com autorização temporária é guardada apenas como GitHub Actions Secret.
+    if([string]::IsNullOrWhiteSpace($BaseApkUrl)) {
+        Write-Host 'Informe uma URL HTTPS privada/autorizada, acessível ao runner por tempo limitado.'
+        $BaseApkUrl = Read-Hidden 'URL HTTPS do APK-base original'
     }
-    Write-Host '[OK] base-apk contém original.apk no repositório PRIVADO.'
+    if([string]::IsNullOrWhiteSpace($BaseApkUrl) -or $BaseApkUrl -notmatch '^https://') {
+        throw 'A URL autorizada do APK-base deve começar com https://.'
+    }
+    Set-GhSecret 'PGSHARP_BASE_APK_URL' $BaseApkUrl
+    Write-Host '[OK] Referência privada do APK-base configurada como secret, sem upload público.'
 
     New-Item -ItemType Directory -Path $baseDir -Force | Out-Null
     $password = Read-Hidden 'Senha da chave de assinatura (mínimo 12 caracteres)'
@@ -95,11 +81,6 @@ try {
     Set-GhSecret 'PGSHARP_SIGNING_PASSWORD' $password
     Set-GhSecret 'PGSHARP_SIGNING_ALIAS' $alias
 
-    Write-Host 'Crie um token fine-grained em github.com/settings/personal-access-tokens/new'
-    Write-Host 'Repositório: PGSharp-Privado; permissão: Contents: Read.'
-    $token = Read-Hidden 'Token de leitura do repositório privado'
-    if([string]::IsNullOrWhiteSpace($token)) { throw 'Token não informado.' }
-    Set-GhSecret 'PRIVATE_REPO_READ_TOKEN' $token
     $archivePass = Read-Hidden 'Senha para abrir o APK criptografado (mínimo 12 caracteres)'
     if($archivePass.Length -lt 12) { throw 'Senha do artefato insuficiente.' }
     Set-GhSecret 'PGSHARP_ARTIFACT_PASSWORD' $archivePass
@@ -109,5 +90,5 @@ try {
     Write-Host "Guarde $keystore e as senhas. Não desinstale seu aplicativo antes dos testes."
 } finally {
     Remove-Item Env:PGSHARP_SIGNING_PASSWORD -ErrorAction SilentlyContinue
-    Remove-Variable password,token,archivePass -ErrorAction SilentlyContinue
+    Remove-Variable password,archivePass,BaseApkUrl -ErrorAction SilentlyContinue
 }
