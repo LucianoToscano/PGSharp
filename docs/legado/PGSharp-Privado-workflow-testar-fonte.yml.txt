@@ -1,0 +1,143 @@
+name: Testar fonte privada (sem gerar APK)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Testar lógica do gancho Smali
+        run: python3 -m unittest discover -s tests -v
+      - name: Testar editor de favoritos DAT com dados fictícios
+        shell: bash
+        run: node tests/test_dat_editor.js
+      - name: Validar scripts e arquivos necessários
+        shell: bash
+        run: |
+          python3 -m py_compile scripts/*.py
+          test -s assets/editor.html
+          test -s src/com/pgs/personal/FavoritesOverlay.java
+          test -s build_ci.sh
+          bash -n build_ci.sh
+      - name: Configurar Java 17 para compilar módulo Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Instalar plataforma Android 35
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -1)"
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;35.0.0"
+      - name: Compilar código Java do painel de favoritos
+        shell: bash
+        run: |
+          test -s "$ANDROID_HOME/platforms/android-35/android.jar"
+          mkdir -p "$RUNNER_TEMP/favorites-classes"
+          javac -encoding UTF-8 --release 8 \
+            -cp "$ANDROID_HOME/platforms/android-35/android.jar" \
+            -d "$RUNNER_TEMP/favorites-classes" \
+            src/com/pgs/personal/FavoritesOverlay.java
+          test -s "$RUNNER_TEMP/favorites-classes/com/pgs/personal/FavoritesOverlay.class"
+      - name: Testar núcleo de reordenação e renomeação inline
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/favorites-inline"
+          javac -encoding UTF-8 \
+            -d "$RUNNER_TEMP/favorites-inline" \
+            src/com/pgs/personal/LiveFavoritesOps.java \
+            tests/LiveFavoritesOpsTest.java
+          java -cp "$RUNNER_TEMP/favorites-inline" LiveFavoritesOpsTest
+      - name: Testar modelo de atalhos e Sniper I a IV
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/shortcut-tests"
+          javac -encoding UTF-8 --release 8 \
+            -d "$RUNNER_TEMP/shortcut-tests" \
+            src/com/pgs/personal/CustomShortcutsModel.java \
+            tests/CustomShortcutsModelTest.java
+          java -cp "$RUNNER_TEMP/shortcut-tests" CustomShortcutsModelTest
+      - name: Validar contrato dos menus originais com adaptador simulado
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-coordinator"
+          javac -encoding UTF-8 --release 8 \
+            -d "$RUNNER_TEMP/native-coordinator" \
+            src/com/pgs/personal/LiveFavoritesOps.java \
+            src/com/pgs/personal/CustomShortcutsModel.java \
+            src/com/pgs/personal/NativeMenuCoordinator.java \
+            tests/NativeMenuCoordinatorTest.java
+          java -cp "$RUNNER_TEMP/native-coordinator" NativeMenuCoordinatorTest
+      - name: Converter classes para DEX Android (D8)
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/favorites-dex"
+          "$ANDROID_HOME/build-tools/35.0.0/d8" \
+            --min-api 26 \
+            --lib "$ANDROID_HOME/platforms/android-35/android.jar" \
+            --output "$RUNNER_TEMP/favorites-dex" \
+            "$RUNNER_TEMP/favorites-classes/com/pgs/personal/"*.class
+          test -s "$RUNNER_TEMP/favorites-dex/classes.dex"
+      - name: Testar inserção do DEX em APK sintético
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os,zipfile
+          from pathlib import Path
+          folder=Path(os.environ['RUNNER_TEMP'])
+          with zipfile.ZipFile(folder/'mock.apk','w') as z:
+              z.writestr('AndroidManifest.xml',b'fake-only-for-packaging-test')
+              for n in ('classes.dex','classes2.dex','classes3.dex'):
+                  z.writestr(n,b'dex'+bytes([10])+b'035'+bytes([0])+b'mock')
+          PY
+          python3 scripts/insert_payload.py \
+            "$RUNNER_TEMP/mock.apk" \
+            "$RUNNER_TEMP/favorites-dex/classes.dex" \
+            "$RUNNER_TEMP/mock-patched.apk"
+          python3 - <<'PY'
+          import os,zipfile
+          from pathlib import Path
+          f=Path(os.environ['RUNNER_TEMP'])/'mock-patched.apk'
+          with zipfile.ZipFile(f) as z:
+              assert z.testzip() is None
+              assert set(['classes.dex','classes2.dex','classes3.dex','classes4.dex']).issubset(z.namelist())
+              assert z.read('classes4.dex').startswith(b'dex'+bytes([10]))
+          print('DEX extra validado sem APK proprietário.')
+          PY
+      - name: Preparar ferramentas de compilação para validação local
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/android-local-tools"
+          cp "$RUNNER_TEMP/favorites-dex/classes.dex" "$RUNNER_TEMP/android-local-tools/favorites.dex"
+          cp "$ANDROID_HOME/platforms/android-35/android.jar" "$RUNNER_TEMP/android-local-tools/android.jar"
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" "$RUNNER_TEMP/android-local-tools/zipalign"
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" "$RUNNER_TEMP/android-local-tools/apksigner.jar"
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib64/libc++.so" "$RUNNER_TEMP/android-local-tools/libc++.so"
+          chmod +x "$RUNNER_TEMP/android-local-tools/zipalign"
+          curl -fL --retry 3 --silent --show-error \
+            -o "$RUNNER_TEMP/android-local-tools/apktool.jar" \
+            https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
+          test -s "$RUNNER_TEMP/android-local-tools/apktool.jar"
+      - name: Publicar ferramentas apenas como artefato PRIVADO
+        uses: actions/upload-artifact@v4
+        with:
+          name: ferramentas-android-local
+          path: "${{ runner.temp }}/android-local-tools/"
+          retention-days: 1
+          if-no-files-found: error
+      - name: Impedir arquivos privados no histórico versionado
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          names=subprocess.check_output(["git","ls-files"],text=True).splitlines()
+          forbidden=(".apk",".dat",".jks",".keystore",".p12",".pem",".key")
+          bad=[p for p in names if p.endswith(forbidden) or "PGSStats" in p]
+          assert not bad,"Arquivos não permitidos no repositório: "+repr(bad)
+          print("Fonte privada validada sem APK, DAT ou chaves.")
+          PY
