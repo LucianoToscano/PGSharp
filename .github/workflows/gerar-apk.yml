@@ -70,6 +70,10 @@ jobs:
           curl --fail --location --silent --show-error --retry 3 \
             --output "$RUNNER_TEMP/base/original.apk" "$BASE_APK_URL"
           test -s "$RUNNER_TEMP/base/original.apk"
+          echo "db38fc01e0148e56a707fca5b08163f2171b2268a667a76428124dc2b069cd83  $RUNNER_TEMP/base/original.apk" | sha256sum --check --status || {
+            echo "O SHA256 da base recebida difere da base auditada. Build interrompido."
+            exit 1
+          }
       - name: Preparar chave de assinatura privada
         if: inputs.modo == 'apk'
         env:
