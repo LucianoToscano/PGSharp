@@ -96,3 +96,9 @@ Contrato de referência: `speciesId`, `coordinate`, `observedAt`, `despawnsAt?`,
 **Evidência de QA:** `bash testar.sh` do kit externo retornou **37 testes Kotlin/JVM aprovados** em 22/11/2026. Sem testes Gradle, APK experimental, compatibilidade com jogo, conexão de feed ao vivo, interface física ou instalação. O kit não implementa teleporte, captura automática nem acesso à API privada do jogo.
 
 **Preservação/segurança:** não alterar ou publicar `PGSData.dat`, `PGSStats.json`, APK-base, tokens, URLs secretas de fornecedores, certificados ou contas. Todo uso de fonte de terceiros deve respeitar contratos e licenças. Permanece necessário identificar a origem e a autorização, validar schemas e timestamps, fazer testes contra dados sintéticos e verificar em dispositivo próprio antes de marcar funcionalidade como pronta. Separar qualquer trabalho futuro em PR própria; esta alteração é somente documentação.
+
+
+<!-- PGSHARP-CHAT-VISUAL-20261122 -->
+## Complemento documental — biblioteca visual e dados Pokémon (22/11/2026)
+
+Consolidação do chat em [docs/CONSOLIDACAO_CHAT_BIBLIOTECA_VISUAL_DADOS_20261122.md](docs/CONSOLIDACAO_CHAT_BIBLIOTECA_VISUAL_DADOS_20261122.md): sprites/modelos 3D de Pokémon GO, PokéStops, Pokébolas, Rockets, ginásios, fontes de GIFs/CSV/JSON, 24 chaves conflitantes do `pogo_pkm.json`, plano de reconhecimento com 5 módulos e perfis PGSharp/Pokemod. O Game Master fornecido é snapshot de 28/08/2026, não API de encontros. Nenhum pacote do chat prova compatibilidade real, direito de redistribuição, cliente modificado, build ou instalação; a arquitetura experimental atual permanece preservada. Dados pessoais, APK-base e chaves não entram no repositório.
