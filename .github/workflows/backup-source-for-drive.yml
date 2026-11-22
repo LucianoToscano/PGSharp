@@ -1,0 +1,30 @@
+name: Backup de fonte PGSharp-Pessoal para Drive
+on:
+  push:
+    paths:
+      - '.github/workflows/backup-source-for-drive.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Exportar fonte e histórico completos
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          git archive --format=zip --output=dist/PGSharp-Pessoal-FONTE-COMPLETA.zip HEAD
+          git bundle create dist/PGSharp-Pessoal-HISTORICO.bundle --all
+          git bundle verify dist/PGSharp-Pessoal-HISTORICO.bundle
+          sha256sum dist/PGSharp-Pessoal-FONTE-COMPLETA.zip dist/PGSharp-Pessoal-HISTORICO.bundle > dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PGSharp-Pessoal-FONTE-COMPLETA-PARA-DRIVE
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
