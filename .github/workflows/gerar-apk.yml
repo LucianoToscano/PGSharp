@@ -1,4 +1,4 @@
-name: PGSharp Pessoal - validação e APK experimental
+name: PGSharp - validação e APK experimental
 on:
   workflow_dispatch:
     inputs:
@@ -15,29 +15,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: pgs-pessoal-manual
+  group: pgsharp-manual
   cancel-in-progress: false
 
 jobs:
-  privado:
+  validacao:
     if: github.actor == 'LucianoToscano'
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     steps:
-      - name: Confirmar configuração do token de leitura
-        env:
-          TOKEN: "${{ secrets.PRIVATE_REPO_READ_TOKEN }}"
-        run: |
-          test -n "$TOKEN" || { echo "Defina o secret PRIVATE_REPO_READ_TOKEN no repositório público."; exit 1; }
-      - name: Obter somente fonte privada
+      - name: Obter fonte consolidada do próprio PGSharp
         uses: actions/checkout@v4
         with:
-          repository: LucianoToscano/PGSharp-Privado
-          ref: main
-          token: "${{ secrets.PRIVATE_REPO_READ_TOKEN }}"
           path: fonte
           persist-credentials: false
-      - name: Validar scripts privados
+      - name: Validar scripts consolidados
         shell: bash
         run: |
           python3 -m unittest discover -s fonte/tests -v
@@ -60,16 +52,23 @@ jobs:
           curl -fL --retry 3 --silent --show-error -o "$RUNNER_TEMP/apktool.jar" \
             https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
           test -s "$RUNNER_TEMP/apktool.jar"
-      - name: Baixar APK original da release PRIVADA
+      - name: Baixar APK base de origem privada autorizada
         if: inputs.modo == 'apk'
         env:
-          GH_TOKEN: "${{ secrets.PRIVATE_REPO_READ_TOKEN }}"
+          BASE_APK_URL: "${{ secrets.PGSHARP_BASE_APK_URL }}"
         shell: bash
         run: |
+          test -n "$BASE_APK_URL" || {
+            echo "Para modo apk, configure o secret PGSHARP_BASE_APK_URL com um endereço HTTPS privado/autorizado do APK original."
+            exit 1
+          }
+          case "$BASE_APK_URL" in
+            https://*) ;;
+            *) echo "A origem do APK precisa usar HTTPS."; exit 1 ;;
+          esac
           mkdir -p "$RUNNER_TEMP/base"
-          gh release download base-apk \
-            -R LucianoToscano/PGSharp-Privado \
-            -p original.apk -D "$RUNNER_TEMP/base"
+          curl --fail --location --silent --show-error --retry 3 \
+            --output "$RUNNER_TEMP/base/original.apk" "$BASE_APK_URL"
           test -s "$RUNNER_TEMP/base/original.apk"
       - name: Preparar chave de assinatura privada
         if: inputs.modo == 'apk'
@@ -96,7 +95,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/output"
-          bash fonte/build_ci.sh "$RUNNER_TEMP/base/original.apk" "$RUNNER_TEMP/output/PGSharp-Pessoal-EXPERIMENTAL.apk"
+          bash fonte/build_ci.sh "$RUNNER_TEMP/base/original.apk" "$RUNNER_TEMP/output/PGSharp-EXPERIMENTAL.apk"
       - name: Empacotar APK criptografado para baixar
         if: inputs.modo == 'apk'
         env:
@@ -105,14 +104,14 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/output"
           7z a -t7z -mhe=on "-p$PGSHARP_ARTIFACT_PASSWORD" \
-            "$RUNNER_TEMP/PGSharp-Pessoal-EXPERIMENTAL.7z" PGSharp-Pessoal-EXPERIMENTAL.apk >/dev/null
-          test -s "$RUNNER_TEMP/PGSharp-Pessoal-EXPERIMENTAL.7z"
-          rm -f PGSharp-Pessoal-EXPERIMENTAL.apk
+            "$RUNNER_TEMP/PGSharp-EXPERIMENTAL.7z" PGSharp-EXPERIMENTAL.apk >/dev/null
+          test -s "$RUNNER_TEMP/PGSharp-EXPERIMENTAL.7z"
+          rm -f PGSharp-EXPERIMENTAL.apk
       - name: Disponibilizar artefato CRIPTOGRAFADO
         if: inputs.modo == 'apk'
         uses: actions/upload-artifact@v4
         with:
-          name: PGSharp-Pessoal-EXPERIMENTAL-protegido
-          path: "${{ runner.temp }}/PGSharp-Pessoal-EXPERIMENTAL.7z"
+          name: PGSharp-EXPERIMENTAL-protegido
+          path: "${{ runner.temp }}/PGSharp-EXPERIMENTAL.7z"
           retention-days: 1
           if-no-files-found: error
